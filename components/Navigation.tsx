@@ -22,6 +22,7 @@ import { useAuth } from './AuthProvider';
 import { useModal } from './ModalContext';
 import { LoginModal } from './LoginModal';
 import { RegisterModal } from './RegisterModal';
+import { getUserLevel } from '@/lib/gamification';
 
 export const Navigation: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -54,6 +55,9 @@ export const Navigation: React.FC = () => {
   };
 
   const isActive = (href: string) => pathname === href;
+  
+  // Level Info für angemeldete User
+  const levelInfo = user && profile ? getUserLevel(profile.points || 0) : null;
 
   return (
     <>
@@ -97,26 +101,54 @@ export const Navigation: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-primary-600" />
                     </div>
-                    <span>{profile?.full_name || user.email}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="text-gray-900">{profile?.full_name || user.email}</span>
+                      {levelInfo && (
+                        <span className={`text-xs ${levelInfo.color} font-medium flex items-center gap-1`}>
+                          <span>{levelInfo.emoji}</span>
+                          <span>Level {levelInfo.level}</span>
+                          <span className="opacity-75">• {profile?.points || 0} Punkte</span>
+                        </span>
+                      )}
+                    </div>
                     <ChevronDown className="w-4 h-4" />
                   </button>
 
                   {/* User Dropdown */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <div className="px-4 py-2 border-b border-gray-100">
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">
                           {profile?.full_name || 'Benutzer'}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                        <p className="text-xs text-primary-600">
-                          {profile?.points || 0} Punkte
-                        </p>
+                        <p className="text-xs text-gray-500 mb-2">{user.email}</p>
+                        {levelInfo && (
+                          <div className="mt-2">
+                            <div className={`inline-flex items-center gap-1.5 px-2 py-1 ${levelInfo.bgColor} ${levelInfo.color} rounded-full text-xs font-semibold`}>
+                              <span>{levelInfo.emoji}</span>
+                              <span>Level {levelInfo.level} • {profile?.points || 0} Punkte</span>
+                            </div>
+                            {levelInfo.level < 5 && (
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                                  <span>Bis Level {levelInfo.level + 1}</span>
+                                  <span className="font-medium">{levelInfo.pointsToNext}</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full ${levelInfo.bgColor} transition-all duration-500`}
+                                    style={{ width: `${levelInfo.progress}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={handleSignOut}
@@ -190,10 +222,13 @@ export const Navigation: React.FC = () => {
                         <p className="text-sm font-medium text-gray-900">
                           {profile?.full_name || 'Benutzer'}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                        <p className="text-xs text-primary-600">
-                          {profile?.points || 0} Punkte
-                        </p>
+                        <p className="text-xs text-gray-500 mb-2">{user.email}</p>
+                        {levelInfo && (
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 ${levelInfo.bgColor} ${levelInfo.color} rounded-full text-xs font-semibold`}>
+                            <span>{levelInfo.emoji}</span>
+                            <span>Level {levelInfo.level} • {profile?.points || 0} Punkte</span>
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={handleSignOut}
