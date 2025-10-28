@@ -5,14 +5,41 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 // OpenAI Client initialisieren
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Supabase Client für Auth-Check
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 export async function POST(request: NextRequest) {
   try {
+    // Auth-Check: Prüfe ob User eingeloggt ist
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Authentifizierung erforderlich. Bitte melde dich an.' },
+        { status: 401 }
+      );
+    }
+
+    // Verifiziere den Token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Ungültige Authentifizierung. Bitte melde dich erneut an.' },
+        { status: 401 }
+      );
+    }
+
     // Request Body parsen
     const { message } = await request.json();
 

@@ -6,11 +6,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bot, Lightbulb, BookOpen, MessageCircle, Sparkles } from 'lucide-react';
+import { Bot, Lightbulb, BookOpen, MessageCircle, Sparkles, Lock } from 'lucide-react';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatMessage } from '@/types';
+import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
 
 export default function ChatPage() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,17 +30,26 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      // API-Aufruf an OpenAI
+      // Session-Token holen
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Nicht authentifiziert');
+      }
+
+      // API-Aufruf an OpenAI mit Auth-Token
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ message }),
       });
 
       if (!response.ok) {
-        throw new Error('Fehler beim Senden der Nachricht');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fehler beim Senden der Nachricht');
       }
 
       const data = await response.json();
@@ -91,6 +104,58 @@ export default function ChatPage() {
   const handleSuggestedQuestion = (question: string) => {
     handleSendMessage(question);
   };
+
+  // Wenn nicht eingeloggt, Login-Hinweis anzeigen
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-primary-50/30 to-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-100 to-primary-200 rounded-3xl mb-6 shadow-lg">
+              <Lock className="w-10 h-10 text-primary-600" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Login erforderlich
+            </h1>
+            <p className="text-lg text-gray-600 mb-8">
+              Der KI-Assistent ist nur für registrierte Benutzer verfügbar. 
+              Melde dich an, um professionelle Beratung zu Unterrichtsstörungen zu erhalten.
+            </p>
+            
+            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-xl mb-8">
+              <div className="flex items-start gap-3 text-left">
+                <Bot className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Was dich erwartet:</h3>
+                  <ul className="text-sm text-gray-600 space-y-2">
+                    <li>✓ ChatGPT-basierte Beratung</li>
+                    <li>✓ Spezialisiert auf Unterrichtsstörungen</li>
+                    <li>✓ Praktische Tipps und Methoden</li>
+                    <li>✓ Rund um die Uhr verfügbar</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/methods"
+                className="px-6 py-3 bg-gradient-to-r from-primary-600 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Zur Anmeldung
+              </Link>
+              <Link
+                href="/"
+                className="px-6 py-3 bg-white/80 backdrop-blur-xl border-2 border-gray-200 text-gray-900 rounded-xl font-semibold hover:bg-white hover:border-primary-300 transition-all duration-300"
+              >
+                Zurück zur Startseite
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
