@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS method_ratings (
   UNIQUE(method_id, user_id)
 );
 
+-- 2a. Answer Upvotes Tabelle (um zu tracken, wer answers upgevoted hat)
+CREATE TABLE IF NOT EXISTS answer_upvotes (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  answer_id UUID REFERENCES answers(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(answer_id, user_id)
+);
+
 -- 2b. Answers Tabelle überprüfen und reparieren
 DO $$
 BEGIN
@@ -261,6 +270,36 @@ BEGIN
     END IF;
 END $$;
 
+-- 4b2. RLS Policies für answer_upvotes
+ALTER TABLE answer_upvotes ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'answer_upvotes' AND policyname = 'Answer upvotes are viewable by everyone'
+    ) THEN
+        CREATE POLICY "Answer upvotes are viewable by everyone" ON answer_upvotes
+        FOR SELECT USING (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'answer_upvotes' AND policyname = 'Authenticated users can upvote answers'
+    ) THEN
+        CREATE POLICY "Authenticated users can upvote answers" ON answer_upvotes
+        FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'answer_upvotes' AND policyname = 'Users can remove their own answer upvotes'
+    ) THEN
+        CREATE POLICY "Users can remove their own answer upvotes" ON answer_upvotes
+        FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
 -- 4c. RLS Policies für comments
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
@@ -353,11 +392,37 @@ CREATE TRIGGER trigger_update_method_rating
   AFTER INSERT OR UPDATE OR DELETE ON method_ratings
   FOR EACH ROW EXECUTE PROCEDURE update_method_rating();
 
+-- 8b. Funktion und Trigger für Answer Upvotes Count
+CREATE OR REPLACE FUNCTION update_answer_upvotes()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (TG_OP = 'INSERT') THEN
+    UPDATE answers 
+    SET upvotes = upvotes + 1 
+    WHERE id = NEW.answer_id;
+    RETURN NEW;
+  ELSIF (TG_OP = 'DELETE') THEN
+    UPDATE answers 
+    SET upvotes = GREATEST(upvotes - 1, 0)
+    WHERE id = OLD.answer_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_answer_upvotes ON answer_upvotes;
+CREATE TRIGGER trigger_update_answer_upvotes
+  AFTER INSERT OR DELETE ON answer_upvotes
+  FOR EACH ROW EXECUTE PROCEDURE update_answer_upvotes();
+
 -- 9. Indizes für Performance
 CREATE INDEX IF NOT EXISTS idx_question_upvotes_question ON question_upvotes(question_id);
 CREATE INDEX IF NOT EXISTS idx_question_upvotes_user ON question_upvotes(user_id);
 CREATE INDEX IF NOT EXISTS idx_method_ratings_method ON method_ratings(method_id);
 CREATE INDEX IF NOT EXISTS idx_method_ratings_user ON method_ratings(user_id);
+CREATE INDEX IF NOT EXISTS idx_answer_upvotes_answer ON answer_upvotes(answer_id);
+CREATE INDEX IF NOT EXISTS idx_answer_upvotes_user ON answer_upvotes(user_id);
 CREATE INDEX IF NOT EXISTS idx_answers_question ON answers(question_id);
 CREATE INDEX IF NOT EXISTS idx_answers_author ON answers(author_id);
 CREATE INDEX IF NOT EXISTS idx_comments_method ON comments(method_id);
