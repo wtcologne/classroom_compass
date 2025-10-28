@@ -97,17 +97,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-        {showAuthor && !question.is_anonymous && question.profile && (
+        {showAuthor && !question.is_anonymous && question.profiles && (
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-primary-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">
-                {question.profile.full_name || 'Benutzer'}
+                {question.profiles.full_name || 'Benutzer'}
               </p>
               <p className="text-xs text-gray-500">
-                {question.profile.points} Punkte
+                {question.profiles.points} Punkte
               </p>
             </div>
           </div>
