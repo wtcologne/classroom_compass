@@ -138,15 +138,12 @@ export default function ChatPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <Link
-                href="/methods"
-                className="px-6 py-3 bg-gradient-to-r from-primary-600 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Zur Anmeldung
-              </Link>
+              <p className="text-sm text-gray-600 mb-2">
+                Bitte melde dich über die Navigation oben rechts an, um den KI-Assistenten zu nutzen.
+              </p>
               <Link
                 href="/"
-                className="px-6 py-3 bg-white/80 backdrop-blur-xl border-2 border-gray-200 text-gray-900 rounded-xl font-semibold hover:bg-white hover:border-primary-300 transition-all duration-300"
+                className="px-6 py-3 bg-gradient-to-r from-primary-600 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Zurück zur Startseite
               </Link>

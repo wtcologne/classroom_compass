@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
+import { ModalProvider } from '@/components/ModalContext';
 import { Navigation } from '@/components/Navigation';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -28,11 +29,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="de" className="h-full">
       <body className={`${inter.className} h-full bg-gray-50`}>
         <AuthProvider>
-          <div className="min-h-full">
-            <Navigation />
-            <main className="flex-1">
-              {children}
-            </main>
+          <ModalProvider>
+            <div className="min-h-full">
+              <Navigation />
+              <main className="flex-1">
+                {children}
+              </main>
             
             {/* Footer */}
             <footer className="bg-white border-t border-gray-200 mt-16">
@@ -47,7 +49,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 </div>
               </div>
             </footer>
-          </div>
+            </div>
+          </ModalProvider>
         </AuthProvider>
       </body>
     </html>

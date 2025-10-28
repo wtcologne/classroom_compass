@@ -19,16 +19,23 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { useModal } from './ModalContext';
 import { LoginModal } from './LoginModal';
 import { RegisterModal } from './RegisterModal';
 
 export const Navigation: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
   
   const { user, profile, signOut } = useAuth();
+  const { 
+    showLoginModal, 
+    showRegisterModal, 
+    openLoginModal, 
+    openRegisterModal, 
+    closeLoginModal, 
+    closeRegisterModal 
+  } = useModal();
   const pathname = usePathname();
 
   const navigationItems = [
@@ -124,13 +131,13 @@ export const Navigation: React.FC = () => {
               ) : (
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={openLoginModal}
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     Anmelden
                   </button>
                   <button
-                    onClick={() => setShowRegisterModal(true)}
+                    onClick={openRegisterModal}
                     className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     Registrieren
@@ -200,7 +207,7 @@ export const Navigation: React.FC = () => {
                     <div className="space-y-2">
                       <button
                         onClick={() => {
-                          setShowLoginModal(true);
+                          openLoginModal();
                           setIsMenuOpen(false);
                         }}
                         className="w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
@@ -209,7 +216,7 @@ export const Navigation: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          setShowRegisterModal(true);
+                          openRegisterModal();
                           setIsMenuOpen(false);
                         }}
                         className="w-full px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
@@ -228,20 +235,14 @@ export const Navigation: React.FC = () => {
       {/* Modals */}
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onSwitchToRegister={() => {
-          setShowLoginModal(false);
-          setShowRegisterModal(true);
-        }}
+        onClose={closeLoginModal}
+        onSwitchToRegister={openRegisterModal}
       />
       
       <RegisterModal
         isOpen={showRegisterModal}
-        onClose={() => setShowRegisterModal(false)}
-        onSwitchToLogin={() => {
-          setShowRegisterModal(false);
-          setShowLoginModal(true);
-        }}
+        onClose={closeRegisterModal}
+        onSwitchToLogin={openLoginModal}
       />
     </>
   );

@@ -18,9 +18,11 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useModal } from '@/components/ModalContext';
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { openRegisterModal } = useModal();
 
   const features = [
     {
@@ -92,12 +94,12 @@ export default function HomePage() {
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-primary-700 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </Link>
-                <Link
-                  href="/questions"
+                <button
+                  onClick={openRegisterModal}
                   className="px-8 py-4 bg-white/80 backdrop-blur-xl border-2 border-gray-200 text-gray-900 rounded-2xl font-semibold hover:bg-white hover:border-primary-300 hover:shadow-lg transition-all duration-300 inline-flex items-center justify-center"
                 >
                   Community beitreten
-                </Link>
+                </button>
               </div>
             )}
 
@@ -202,13 +204,23 @@ export default function HomePage() {
                 <span>Methoden entdecken</span>
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link
-                href="/questions"
-                className="px-8 py-4 bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white rounded-2xl font-semibold hover:bg-white/20 hover:border-white/50 transition-all duration-300 inline-flex items-center justify-center"
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Community beitreten
-              </Link>
+              {!user ? (
+                <button
+                  onClick={openRegisterModal}
+                  className="px-8 py-4 bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white rounded-2xl font-semibold hover:bg-white/20 hover:border-white/50 transition-all duration-300 inline-flex items-center justify-center"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Community beitreten
+                </button>
+              ) : (
+                <Link
+                  href="/questions"
+                  className="px-8 py-4 bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white rounded-2xl font-semibold hover:bg-white/20 hover:border-white/50 transition-all duration-300 inline-flex items-center justify-center"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Zur Community
+                </Link>
+              )}
             </div>
           </div>
         </div>
