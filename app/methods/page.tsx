@@ -150,8 +150,8 @@ export default function MethodsPage() {
     try {
       setFormLoading(true);
 
-      const { data, error } = await supabase
-        .from('methods')
+      const { data, error } = await (supabase
+        .from('methods') as any)
         .insert({
           title: formData.title,
           description: formData.description,
