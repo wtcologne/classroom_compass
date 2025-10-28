@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { MethodCard } from '@/components/MethodCard';
+import { MethodDetailModal } from '@/components/MethodDetailModal';
 import { Method, MethodFormData, MethodFilters } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/AuthProvider';
@@ -26,8 +27,12 @@ export default function MethodsPage() {
   const [methods, setMethods] = useState<Method[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<Method | null>(null);
   const [filters, setFilters] = useState<MethodFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [showMyMethodsOnly, setShowMyMethodsOnly] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [userFavorites, setUserFavorites] = useState<Set<string>>(new Set());
   const { user } = useAuth();
 
   // Form State
@@ -52,6 +57,33 @@ export default function MethodsPage() {
     'Gruppenarbeit',
   ];
 
+  // Favoriten des Benutzers laden
+  const loadUserFavorites = async () => {
+    if (!user) {
+      setUserFavorites(new Set());
+      return;
+    }
+
+    try {
+      const { data, error } = await (supabase
+        .from('method_favorites') as any)
+        .select('method_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      const favoriteIds = new Set<string>(data?.map((f: any) => f.method_id) || []);
+      setUserFavorites(favoriteIds);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  // Bei User-Änderung Favoriten laden
+  useEffect(() => {
+    loadUserFavorites();
+  }, [user]);
+
   // Methoden laden
   const loadMethods = async () => {
     try {
@@ -61,13 +93,18 @@ export default function MethodsPage() {
         .from('methods')
         .select(`
           *,
-          profiles:author_id (
+          profile:profiles!author_id (
             id,
             full_name,
             points
           )
         `)
         .order('created_at', { ascending: false });
+
+      // Filter für "Meine Methoden" anwenden
+      if (showMyMethodsOnly && user) {
+        query = query.eq('author_id', user.id);
+      }
 
       // Filter anwenden
       if (filters.category) {
@@ -85,7 +122,15 @@ export default function MethodsPage() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setMethods(data || []);
+      
+      let filteredMethods = data || [];
+      
+      // Client-seitiger Filter für Favoriten
+      if (showFavoritesOnly && user) {
+        filteredMethods = filteredMethods.filter((m: any) => userFavorites.has(m.id));
+      }
+      
+      setMethods(filteredMethods);
     } catch (error) {
       console.error('Error loading methods:', error);
     } finally {
@@ -95,7 +140,7 @@ export default function MethodsPage() {
 
   useEffect(() => {
     loadMethods();
-  }, [filters, searchTerm]);
+  }, [filters, searchTerm, showMyMethodsOnly, showFavoritesOnly, userFavorites]);
 
   // Neue Methode hinzufügen
   const handleAddMethod = async (e: React.FormEvent) => {
@@ -161,6 +206,45 @@ export default function MethodsPage() {
   const resetFilters = () => {
     setFilters({});
     setSearchTerm('');
+    setShowMyMethodsOnly(false);
+    setShowFavoritesOnly(false);
+  };
+
+  // Favoriten-Status togglen
+  const toggleFavorite = async (methodId: string) => {
+    if (!user) return;
+
+    try {
+      const isFavorited = userFavorites.has(methodId);
+
+      if (isFavorited) {
+        // Favorit entfernen
+        const { error } = await (supabase
+          .from('method_favorites') as any)
+          .delete()
+          .eq('user_id', user.id)
+          .eq('method_id', methodId);
+
+        if (error) throw error;
+
+        setUserFavorites(prev => {
+          const next = new Set(prev);
+          next.delete(methodId);
+          return next;
+        });
+      } else {
+        // Favorit hinzufügen
+        const { error } = await (supabase
+          .from('method_favorites') as any)
+          .insert([{ user_id: user.id, method_id: methodId }]);
+
+        if (error) throw error;
+
+        setUserFavorites(prev => new Set([...Array.from(prev), methodId]));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   return (
@@ -187,6 +271,54 @@ export default function MethodsPage() {
             </button>
           )}
         </div>
+
+        {/* Filter Chips */}
+        {user && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setShowMyMethodsOnly(false);
+                  setShowFavoritesOnly(false);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  !showMyMethodsOnly && !showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                Alle Methoden
+              </button>
+              <button
+                onClick={() => {
+                  setShowMyMethodsOnly(true);
+                  setShowFavoritesOnly(false);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  showMyMethodsOnly && !showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                Meine Methoden
+              </button>
+              <button
+                onClick={() => {
+                  setShowMyMethodsOnly(false);
+                  setShowFavoritesOnly(true);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 inline-flex items-center gap-2 ${
+                  showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                Favoriten
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="card mb-8">
@@ -222,7 +354,7 @@ export default function MethodsPage() {
             </div>
 
             {/* Reset Filters */}
-            {(filters.category || searchTerm) && (
+            {(filters.category || searchTerm || showMyMethodsOnly || showFavoritesOnly) && (
               <button
                 onClick={resetFilters}
                 className="btn-secondary inline-flex items-center"
@@ -268,12 +400,32 @@ export default function MethodsPage() {
                 key={method.id}
                 method={method}
                 onViewDetails={(method) => {
-                  // TODO: Implement method details modal/page
-                  console.log('View details for method:', method.title);
+                  setSelectedMethod(method);
                 }}
+                isFavorited={userFavorites.has(method.id)}
+                onToggleFavorite={() => toggleFavorite(method.id)}
+                currentUserId={user?.id}
               />
             ))}
           </div>
+        )}
+
+        {/* Method Detail Modal */}
+        {selectedMethod && (
+          <MethodDetailModal
+            method={selectedMethod}
+            onClose={() => setSelectedMethod(null)}
+            onRatingChange={loadMethods}
+            onDelete={() => {
+              setSelectedMethod(null);
+              loadMethods();
+            }}
+            onUpdate={() => {
+              loadMethods();
+            }}
+            isFavorited={userFavorites.has(selectedMethod.id)}
+            onToggleFavorite={() => toggleFavorite(selectedMethod.id)}
+          />
         )}
 
         {/* Add Method Modal */}

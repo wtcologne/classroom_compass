@@ -27,7 +27,7 @@ export interface Method {
   rating_count: number;
   created_at: string;
   updated_at: string;
-  profiles?: Profile; // Joined profile data
+  profile?: Profile; // Joined profile data
 }
 
 // Question Types
@@ -65,6 +65,21 @@ export interface Comment {
   created_at: string;
   updated_at: string;
   profiles?: Profile; // Joined profile data
+}
+
+// Favorites Types
+export interface QuestionFavorite {
+  id: string;
+  user_id: string;
+  question_id: string;
+  created_at: string;
+}
+
+export interface MethodFavorite {
+  id: string;
+  user_id: string;
+  method_id: string;
+  created_at: string;
 }
 
 // Form Types

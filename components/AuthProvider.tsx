@@ -81,10 +81,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error loading profile:', error);
+        return;
+      }
+
+      // If no profile exists, create one
+      if (!data) {
+        console.log('No profile found, creating one...');
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: userData.user.email || '',
+              full_name: userData.user.user_metadata?.full_name || null,
+              avatar_url: userData.user.user_metadata?.avatar_url || null,
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            return;
+          }
+          setProfile(newProfile);
+        }
         return;
       }
 

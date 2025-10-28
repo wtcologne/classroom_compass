@@ -17,9 +17,11 @@ import {
   Eye,
   EyeOff,
   SortAsc,
-  SortDesc
+  SortDesc,
+  Bookmark
 } from 'lucide-react';
 import { QuestionCard } from '@/components/QuestionCard';
+import { QuestionDetailModal } from '@/components/QuestionDetailModal';
 import { Question, QuestionFormData, QuestionFilters } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/components/AuthProvider';
@@ -28,8 +30,12 @@ export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [filters, setFilters] = useState<QuestionFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [showMyQuestionsOnly, setShowMyQuestionsOnly] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [userFavorites, setUserFavorites] = useState<Set<string>>(new Set());
   const { user } = useAuth();
 
   // Form State
@@ -47,6 +53,33 @@ export default function QuestionsPage() {
     { value: 'upvotes', label: 'Meist bewertet', icon: ThumbsUp },
   ];
 
+  // Favoriten des Benutzers laden
+  const loadUserFavorites = async () => {
+    if (!user) {
+      setUserFavorites(new Set());
+      return;
+    }
+
+    try {
+      const { data, error } = await (supabase
+        .from('question_favorites') as any)
+        .select('question_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      const favoriteIds = new Set<string>(data?.map((f: any) => f.question_id) || []);
+      setUserFavorites(favoriteIds);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  // Bei User-Änderung Favoriten laden
+  useEffect(() => {
+    loadUserFavorites();
+  }, [user]);
+
   // Fragen laden
   const loadQuestions = async () => {
     try {
@@ -56,12 +89,17 @@ export default function QuestionsPage() {
         .from('questions')
         .select(`
           *,
-          profiles:author_id (
+          profile:profiles!author_id (
             id,
             full_name,
             points
           )
         `);
+
+      // Filter für "Meine Fragen" anwenden
+      if (showMyQuestionsOnly && user) {
+        query = query.eq('author_id', user.id);
+      }
 
       // Sortierung anwenden
       const sortBy = filters.sortBy || 'newest';
@@ -85,7 +123,15 @@ export default function QuestionsPage() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setQuestions(data || []);
+      
+      let filteredQuestions = data || [];
+      
+      // Client-seitiger Filter für Favoriten
+      if (showFavoritesOnly && user) {
+        filteredQuestions = filteredQuestions.filter((q: any) => userFavorites.has(q.id));
+      }
+      
+      setQuestions(filteredQuestions);
     } catch (error) {
       console.error('Error loading questions:', error);
     } finally {
@@ -95,7 +141,7 @@ export default function QuestionsPage() {
 
   useEffect(() => {
     loadQuestions();
-  }, [filters, searchTerm]);
+  }, [filters, searchTerm, showMyQuestionsOnly, showFavoritesOnly, userFavorites]);
 
   // Neue Frage hinzufügen
   const handleAddQuestion = async (e: React.FormEvent) => {
@@ -107,12 +153,12 @@ export default function QuestionsPage() {
 
       const { data, error } = await supabase
         .from('questions')
-        .insert({
+        .insert([{
           title: formData.title,
           content: formData.content,
-          author_id: formData.is_anonymous ? null : user.id,
+          author_id: user.id, // Immer speichern, auch bei anonymen Fragen
           is_anonymous: formData.is_anonymous,
-        })
+        }] as any)
         .select()
         .single();
 
@@ -152,6 +198,45 @@ export default function QuestionsPage() {
   const resetFilters = () => {
     setFilters({});
     setSearchTerm('');
+    setShowMyQuestionsOnly(false);
+    setShowFavoritesOnly(false);
+  };
+
+  // Favoriten-Status togglen
+  const toggleFavorite = async (questionId: string) => {
+    if (!user) return;
+
+    try {
+      const isFavorited = userFavorites.has(questionId);
+
+      if (isFavorited) {
+        // Favorit entfernen
+        const { error } = await (supabase
+          .from('question_favorites') as any)
+          .delete()
+          .eq('user_id', user.id)
+          .eq('question_id', questionId);
+
+        if (error) throw error;
+
+        setUserFavorites(prev => {
+          const next = new Set(prev);
+          next.delete(questionId);
+          return next;
+        });
+      } else {
+        // Favorit hinzufügen
+        const { error } = await (supabase
+          .from('question_favorites') as any)
+          .insert([{ user_id: user.id, question_id: questionId }]);
+
+        if (error) throw error;
+
+        setUserFavorites(prev => new Set([...Array.from(prev), questionId]));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   return (
@@ -178,6 +263,54 @@ export default function QuestionsPage() {
             </button>
           )}
         </div>
+
+        {/* Filter Chips */}
+        {user && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setShowMyQuestionsOnly(false);
+                  setShowFavoritesOnly(false);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  !showMyQuestionsOnly && !showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                Alle Fragen
+              </button>
+              <button
+                onClick={() => {
+                  setShowMyQuestionsOnly(true);
+                  setShowFavoritesOnly(false);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  showMyQuestionsOnly && !showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                Meine Fragen
+              </button>
+              <button
+                onClick={() => {
+                  setShowMyQuestionsOnly(false);
+                  setShowFavoritesOnly(true);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 inline-flex items-center gap-2 ${
+                  showFavoritesOnly
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                Favoriten
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="card mb-8">
@@ -212,7 +345,7 @@ export default function QuestionsPage() {
             </div>
 
             {/* Reset Filters */}
-            {(filters.sortBy !== 'newest' || searchTerm) && (
+            {(filters.sortBy !== 'newest' || searchTerm || showMyQuestionsOnly || showFavoritesOnly) && (
               <button
                 onClick={resetFilters}
                 className="btn-secondary inline-flex items-center"
@@ -258,12 +391,25 @@ export default function QuestionsPage() {
                 key={question.id}
                 question={question}
                 onViewDetails={(question) => {
-                  // TODO: Implement question details modal/page
-                  console.log('View details for question:', question.title);
+                  setSelectedQuestion(question);
                 }}
+                isFavorited={userFavorites.has(question.id)}
+                onToggleFavorite={() => toggleFavorite(question.id)}
+                currentUserId={user?.id}
               />
             ))}
           </div>
+        )}
+
+        {/* Question Detail Modal */}
+        {selectedQuestion && (
+          <QuestionDetailModal
+            question={selectedQuestion}
+            onClose={() => setSelectedQuestion(null)}
+            onUpvoteChange={loadQuestions}
+            isFavorited={userFavorites.has(selectedQuestion.id)}
+            onToggleFavorite={() => toggleFavorite(selectedQuestion.id)}
+          />
         )}
 
         {/* Add Question Modal */}

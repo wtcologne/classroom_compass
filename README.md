@@ -12,14 +12,18 @@ Eine moderne Plattform für Lehrer:innen und Lehramtsstudierende zum Umgang mit 
 ### 🗂️ Methodenpool
 - Sammlung bewährter Strategien gegen Unterrichtsstörungen
 - Such- und Filterfunktion nach Kategorien und Tags
-- Kommentare und Sterne-Bewertungen
+- Kommentare und Sterne-Bewertungen (1-5 Sterne)
 - Möglichkeit, eigene Methoden einzureichen
+- **🔖 Favoriten**: Markiere wichtige Methoden als Favoriten
+- Filter für "Meine Methoden" und "Favoriten"
 
 ### 💬 Frag die Crowd
-- Anonyme Fragen an die Community stellen
+- **Anonyme Fragen** an die Community stellen
 - Antworten von erfahrenen Kolleg:innen erhalten
-- Upvote-System für hilfreiche Beiträge
-- Sortierung nach Neuigkeit und Beliebtheit
+- Upvote-System für hilfreiche Fragen und Antworten
+- Sortierung nach Neuigkeit, Beliebtheit
+- **🔖 Favoriten**: Speichere wichtige Fragen
+- Filter für "Meine Fragen" und "Favoriten"
 
 ### 🤖 KI-Assistent
 - ChatGPT-Integration für innovative Lösungsansätze
@@ -68,8 +72,11 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 ### 4. Supabase-Datenbank einrichten
 1. Erstelle ein neues Supabase-Projekt
-2. Führe das SQL-Schema aus (`supabase-schema.sql`) in der Supabase SQL-Konsole aus
-3. Aktiviere Row Level Security (RLS) für alle Tabellen
+2. Öffne den **SQL Editor** in deinem Supabase Dashboard
+3. Führe die Migrations aus:
+   - **Schnellstart**: `migrations/00-complete-setup.sql` (empfohlen - alles in einem)
+   - **Schrittweise**: Die einzelnen Dateien in `migrations/` in nummerischer Reihenfolge
+4. Fertig! RLS ist automatisch aktiviert
 
 ### 5. Entwicklungsserver starten
 ```bash
@@ -80,17 +87,25 @@ Die Anwendung ist jetzt unter [http://localhost:3000](http://localhost:3000) ver
 
 ## 🗄️ Datenbank-Schema
 
-### Tabellen
+### Haupttabellen
 - **profiles**: Benutzerprofile mit Rollen und Punkten
 - **methods**: Unterrichtsmethoden mit Bewertungen
 - **questions**: Community-Fragen (anonym möglich)
 - **answers**: Antworten auf Fragen
 - **comments**: Kommentare und Bewertungen zu Methoden
 
+### Interaktions-Tabellen
+- **question_upvotes**: Upvotes für Fragen
+- **answer_upvotes**: Upvotes für Antworten
+- **method_ratings**: Bewertungen für Methoden (1-5 Sterne)
+- **question_favorites**: Favorisierte Fragen
+- **method_favorites**: Favorisierte Methoden
+
 ### Sicherheit
-- Row Level Security (RLS) aktiviert
+- Row Level Security (RLS) aktiviert für alle Tabellen
 - Automatische Profilerstellung bei Registrierung
 - Rollenbasierte Zugriffskontrolle
+- User können nur eigene Daten bearbeiten/löschen
 
 ## 🎨 Design-System
 
@@ -117,6 +132,7 @@ classroom_compass/
 │   ├── methods/           # Methodenpool Seite
 │   ├── questions/         # Frag die Crowd Seite
 │   ├── globals.css        # Globale Styles
+│   ├── icon.svg           # App Icon
 │   ├── layout.tsx         # Root Layout
 │   └── page.tsx          # Homepage
 ├── components/            # React Komponenten
@@ -124,15 +140,24 @@ classroom_compass/
 │   ├── ChatBox.tsx        # Chat Interface
 │   ├── LoginModal.tsx     # Login Modal
 │   ├── MethodCard.tsx     # Methoden-Karte
+│   ├── MethodDetailModal.tsx # Methoden-Detail Ansicht
 │   ├── Navigation.tsx     # Hauptnavigation
 │   ├── QuestionCard.tsx   # Fragen-Karte
+│   ├── QuestionDetailModal.tsx # Fragen-Detail Ansicht
 │   └── RegisterModal.tsx  # Registrierung Modal
 ├── lib/                   # Utilities
 │   ├── database.types.ts # Supabase Types
 │   └── supabaseClient.ts  # Supabase Client
+├── migrations/            # 📦 Datenbank-Migrations
+│   ├── 00-complete-setup.sql # Komplett-Setup (empfohlen)
+│   ├── 01-schema.sql      # Basis-Schema
+│   ├── 02-interactions.sql # Upvotes & Ratings
+│   ├── 03-favorites.sql   # Favoriten-System
+│   ├── 04-fix-anonymous-questions.sql
+│   ├── 05-verify-permissions.sql
+│   └── README.md         # Migrations-Dokumentation
 ├── types/                 # TypeScript Types
 │   └── index.ts          # App-spezifische Types
-├── supabase-schema.sql    # Datenbank-Schema
 └── README.md             # Diese Datei
 ```
 
@@ -154,17 +179,22 @@ npm run lint     # ESLint ausführen
 
 ## 🚀 Deployment
 
-### Vercel (Empfohlen)
-1. Verbinde dein GitHub-Repository mit Vercel
-2. Konfiguriere Environment Variables
-3. Deploy automatisch bei Git-Push
+### Schnellstart
+Siehe [DEPLOYMENT.md](DEPLOYMENT.md) für eine ausführliche Schritt-für-Schritt-Anleitung.
 
-### Andere Plattformen
-Die App kann auf jeder Plattform deployed werden, die Next.js unterstützt:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
+### Kurzanleitung:
+1. **GitHub**: `git push origin main`
+2. **Vercel**: Repository verbinden
+3. **Environment Variables** in Vercel konfigurieren:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `OPENAI_API_KEY`
+4. **Deploy** - automatisch nach jedem Git Push
+
+### ⚠️ Wichtig: API-Keys sind sicher!
+- `.env.local` wird nie zu Git hinzugefügt (in `.gitignore`)
+- Alle Keys werden nur in Vercel konfiguriert
+- Siehe [DEPLOYMENT.md](DEPLOYMENT.md) für Details
 
 ## 🤝 Beitragen
 

@@ -6,19 +6,25 @@
 'use client';
 
 import React from 'react';
-import { MessageCircle, User, Calendar, ThumbsUp, Eye } from 'lucide-react';
+import { MessageCircle, User, Calendar, ThumbsUp, Eye, Bookmark } from 'lucide-react';
 import { Question } from '@/types';
 
 interface QuestionCardProps {
   question: Question;
   onViewDetails?: (question: Question) => void;
   showAuthor?: boolean;
+  isFavorited?: boolean;
+  onToggleFavorite?: () => void;
+  currentUserId?: string;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
   onViewDetails,
   showAuthor = true,
+  isFavorited = false,
+  onToggleFavorite,
+  currentUserId,
 }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('de-DE', {
@@ -58,10 +64,29 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         </div>
         
-        {/* Upvotes */}
-        <div className="flex items-center space-x-1 text-primary-600">
-          <ThumbsUp className="w-4 h-4" />
-          <span className="text-sm font-medium">{question.upvotes}</span>
+        {/* Upvotes & Favorite */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1 text-primary-600">
+            <ThumbsUp className="w-4 h-4" />
+            <span className="text-sm font-medium">{question.upvotes}</span>
+          </div>
+          
+          {currentUserId && onToggleFavorite && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isFavorited
+                  ? 'text-yellow-500 hover:bg-yellow-50'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500'
+              }`}
+              title={isFavorited ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+            >
+              <Bookmark className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -72,17 +97,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-        {showAuthor && !question.is_anonymous && question.profiles && (
+        {showAuthor && !question.is_anonymous && question.profile && (
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-primary-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">
-                {question.profiles.full_name || 'Benutzer'}
+                {question.profile.full_name || 'Benutzer'}
               </p>
               <p className="text-xs text-gray-500">
-                {question.profiles.points} Punkte
+                {question.profile.points} Punkte
               </p>
             </div>
           </div>
