@@ -29,6 +29,8 @@ interface QuestionDetailModalProps {
   onUpvoteChange?: () => void;
   isFavorited?: boolean;
   onToggleFavorite?: () => void;
+  onDelete?: () => void;
+  onUpdate?: () => void;
 }
 
 export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({ 
@@ -36,7 +38,9 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
   onClose,
   onUpvoteChange,
   isFavorited = false,
-  onToggleFavorite
+  onToggleFavorite,
+  onDelete,
+  onUpdate
 }) => {
   const { user } = useAuth();
   const [hasUpvoted, setHasUpvoted] = useState(false);
@@ -48,6 +52,14 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
   const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [showAnswerInput, setShowAnswerInput] = useState(false);
   const [answerContent, setAnswerContent] = useState('');
+  
+  // Edit/Delete state
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editTitle, setEditTitle] = useState(question.title);
+  const [editContent, setEditContent] = useState(question.content);
+  
+  const isAuthor = user?.id === question.author_id;
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -182,6 +194,54 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
     }
   };
 
+  // Handle question update
+  const handleUpdateQuestion = async () => {
+    if (!user || loading || !editTitle.trim() || !editContent.trim()) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await (supabase
+        .from('questions') as any)
+        .update({
+          title: editTitle.trim(),
+          content: editContent.trim(),
+        })
+        .eq('id', question.id);
+      
+      if (error) throw error;
+      
+      setIsEditing(false);
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Error updating question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle question delete
+  const handleDeleteQuestion = async () => {
+    if (!user || loading) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await (supabase
+        .from('questions') as any)
+        .delete()
+        .eq('id', question.id);
+      
+      if (error) throw error;
+      
+      if (onDelete) onDelete();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -194,30 +254,64 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-start justify-between">
           <div className="flex-1 pr-4">
-            <div className="flex items-center gap-2 mb-2">
-              {isAnonymous && (
-                <span className="badge-secondary text-xs flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  Anonym
-                </span>
-              )}
-              <div className="flex items-center gap-1 text-sm">
-                <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'text-primary-600 fill-primary-600' : 'text-primary-600'}`} />
-                <span className="font-medium text-gray-700">
-                  {upvoteCount}
-                </span>
+            {isEditing ? (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full text-2xl font-bold px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Fragetitel"
+                />
               </div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {question.title}
-            </h2>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  {isAnonymous && (
+                    <span className="badge-secondary text-xs flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      Anonym
+                    </span>
+                  )}
+                  <div className="flex items-center gap-1 text-sm">
+                    <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'text-primary-600 fill-primary-600' : 'text-primary-600'}`} />
+                    <span className="font-medium text-gray-700">
+                      {upvoteCount}
+                    </span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {question.title}
+                </h2>
+              </>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isAuthor && !isEditing && !showDeleteConfirm && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 hover:bg-blue-50 rounded-full transition-colors"
+                  title="Bearbeiten"
+                >
+                  <Edit2 className="w-5 h-5 text-blue-600" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 hover:bg-red-50 rounded-full transition-colors"
+                  title="Löschen"
+                >
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -248,50 +342,116 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
             </div>
           </div>
 
+          {/* Delete Confirmation */}
+          {showDeleteConfirm && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-red-900 mb-2">
+                Frage wirklich löschen?
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Diese Aktion kann nicht rückgängig gemacht werden. Alle Antworten zu dieser Frage werden ebenfalls gelöscht.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn-secondary"
+                  disabled={loading}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleDeleteQuestion}
+                  disabled={loading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {loading ? 'Wird gelöscht...' : 'Endgültig löschen'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Question Content */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Frage
-            </h3>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {question.content}
-            </p>
-          </div>
+          {!showDeleteConfirm && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Frage
+              </h3>
+              {isEditing ? (
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                  rows={6}
+                  placeholder="Beschreibe deine Frage ausführlich..."
+                />
+              ) : (
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {question.content}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Edit Actions */}
+          {isEditing && !showDeleteConfirm && (
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <button
+                onClick={handleUpdateQuestion}
+                disabled={loading || !editTitle.trim() || !editContent.trim()}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Wird gespeichert...' : 'Änderungen speichern'}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTitle(question.title);
+                  setEditContent(question.content);
+                }}
+                className="btn-secondary flex-1"
+                disabled={loading}
+              >
+                Abbrechen
+              </button>
+            </div>
+          )}
 
           {/* Answers Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              Antworten ({answers.length})
-            </h3>
-            
-            {loadingAnswers && answers.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="spinner w-6 h-6"></div>
-              </div>
-            ) : answers.length === 0 ? (
-              <div className="bg-gray-50 rounded-xl p-6">
-                <p className="text-gray-600 text-sm text-center py-4">
-                  Noch keine Antworten vorhanden. Sei der Erste!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {answers.map((answer) => (
-                  <AnswerItem
-                    key={answer.id}
-                    answer={answer}
-                    currentUserId={user?.id}
-                    onUpdate={loadAnswers}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          {!showDeleteConfirm && !isEditing && (
+          <>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                Antworten ({answers.length})
+              </h3>
+              
+              {loadingAnswers && answers.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="spinner w-6 h-6"></div>
+                </div>
+              ) : answers.length === 0 ? (
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <p className="text-gray-600 text-sm text-center py-4">
+                    Noch keine Antworten vorhanden. Sei der Erste!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {answers.map((answer) => (
+                    <AnswerItem
+                      key={answer.id}
+                      answer={answer}
+                      currentUserId={user?.id}
+                      onUpdate={loadAnswers}
+                      formatDate={formatDate}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
           {/* Answer Input Section */}
-          {showAnswerInput && user && (
+          {showAnswerInput && user && !isEditing && !showDeleteConfirm && (
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
                 Deine Antwort
@@ -325,49 +485,51 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-100">
-            <button 
-              onClick={handleUpvote}
-              disabled={!user || loading}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                hasUpvoted 
-                  ? 'bg-primary-600 text-white hover:bg-primary-700' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'fill-current' : ''}`} />
-              {hasUpvoted ? 'Upvoted' : 'Upvote'}
-            </button>
-            
-            {onToggleFavorite && (
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
               <button 
-                onClick={onToggleFavorite}
-                disabled={!user}
-                className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  isFavorited 
-                    ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                onClick={handleUpvote}
+                disabled={!user || loading}
+                className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  hasUpvoted 
+                    ? 'bg-primary-600 text-white hover:bg-primary-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <Bookmark className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-                {isFavorited ? 'Favorit' : 'Favorisieren'}
+                <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'fill-current' : ''}`} />
+                {hasUpvoted ? 'Upvoted' : 'Upvote'}
               </button>
+              
+              {onToggleFavorite && (
+                <button 
+                  onClick={onToggleFavorite}
+                  disabled={!user}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    isFavorited 
+                      ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <Bookmark className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                  {isFavorited ? 'Favorit' : 'Favorisieren'}
+                </button>
+              )}
+              
+              <button 
+                onClick={() => setShowAnswerInput(!showAnswerInput)}
+                disabled={!user}
+                className="btn-secondary flex-1 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Antworten
+              </button>
+            </div>
+            {!user && (
+              <p className="text-sm text-gray-500 text-center">
+                Melde dich an, um zu upvoten und zu antworten
+              </p>
             )}
-            
-            <button 
-              onClick={() => setShowAnswerInput(!showAnswerInput)}
-              disabled={!user}
-              className="btn-secondary flex-1 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Antworten
-            </button>
-          </div>
-          {!user && (
-            <p className="text-sm text-gray-500 text-center">
-              Melde dich an, um zu upvoten und zu antworten
-            </p>
+          </>
           )}
         </div>
       </div>

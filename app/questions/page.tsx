@@ -409,6 +409,8 @@ export default function QuestionsPage() {
             onUpvoteChange={loadQuestions}
             isFavorited={userFavorites.has(selectedQuestion.id)}
             onToggleFavorite={() => toggleFavorite(selectedQuestion.id)}
+            onDelete={loadQuestions}
+            onUpdate={loadQuestions}
           />
         )}
 
