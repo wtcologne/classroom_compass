@@ -93,8 +93,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('No profile found, creating one...');
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
+          const { data: newProfile, error: createError } = await (supabase
+            .from('profiles') as any)
             .insert({
               id: userId,
               email: userData.user.email || '',
