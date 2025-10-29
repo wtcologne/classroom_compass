@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { Star, User, Tag, Bookmark } from 'lucide-react';
+import { Star, User, Bookmark } from 'lucide-react';
 import { Method } from '@/types';
 import { CategoryBadge } from './CategoryBadge';
 
@@ -89,21 +89,6 @@ export const MethodCard: React.FC<MethodCardProps> = ({
         {method.description}
       </p>
 
-      {/* Tags */}
-      {method.tags && method.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {method.tags.slice(0, 4).map((tag, index) => (
-            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-              {tag}
-            </span>
-          ))}
-          {method.tags.length > 4 && (
-            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs">
-              +{method.tags.length - 4}
-            </span>
-          )}
-        </div>
-      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">

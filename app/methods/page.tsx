@@ -11,7 +11,6 @@ import {
   Plus, 
   Search, 
   Filter, 
-  Tag, 
   Star,
   X,
   Save,
@@ -42,7 +41,6 @@ export default function MethodsPage() {
     category: '',
     tags: [],
   });
-  const [tagInput, setTagInput] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
   // Kategorien für Dropdown
@@ -111,10 +109,6 @@ export default function MethodsPage() {
         query = query.eq('category', filters.category);
       }
 
-      if (filters.tags && filters.tags.length > 0) {
-        query = query.overlaps('tags', filters.tags);
-      }
-
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
@@ -171,7 +165,6 @@ export default function MethodsPage() {
         category: '',
         tags: [],
       });
-      setTagInput('');
       setShowAddForm(false);
 
       // Methoden neu laden
@@ -181,25 +174,6 @@ export default function MethodsPage() {
     } finally {
       setFormLoading(false);
     }
-  };
-
-  // Tag hinzufügen
-  const addTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, tagInput.trim()],
-      }));
-      setTagInput('');
-    }
-  };
-
-  // Tag entfernen
-  const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove),
-    }));
   };
 
   // Filter zurücksetzen
@@ -500,46 +474,6 @@ export default function MethodsPage() {
                   />
                 </div>
 
-                {/* Tags */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tags
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {formData.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="badge-primary inline-flex items-center"
-                      >
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="ml-2 hover:text-primary-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                      className="flex-1 input"
-                      placeholder="Tag hinzufügen..."
-                    />
-                    <button
-                      type="button"
-                      onClick={addTag}
-                      className="btn-secondary"
-                    >
-                      <Tag className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
                 {/* Submit Buttons */}
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">

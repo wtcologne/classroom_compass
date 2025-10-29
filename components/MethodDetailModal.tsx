@@ -15,7 +15,6 @@ import {
   Star, 
   Calendar, 
   User, 
-  Tag,
   Award,
   MessageSquare,
   Edit2,
@@ -60,7 +59,6 @@ export const MethodDetailModal: React.FC<MethodDetailModalProps> = ({
     category: method.category,
     tags: method.tags || [],
   });
-  const [editTagInput, setEditTagInput] = useState('');
   
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -401,67 +399,6 @@ export const MethodDetailModal: React.FC<MethodDetailModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags
-                </label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {editData.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="badge-primary inline-flex items-center"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => setEditData(prev => ({
-                          ...prev,
-                          tags: prev.tags.filter(t => t !== tag)
-                        }))}
-                        className="ml-2 hover:text-primary-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={editTagInput}
-                    onChange={(e) => setEditTagInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (editTagInput.trim() && !editData.tags.includes(editTagInput.trim())) {
-                          setEditData(prev => ({
-                            ...prev,
-                            tags: [...prev.tags, editTagInput.trim()]
-                          }));
-                          setEditTagInput('');
-                        }
-                      }
-                    }}
-                    className="flex-1 input"
-                    placeholder="Tag hinzufügen..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editTagInput.trim() && !editData.tags.includes(editTagInput.trim())) {
-                        setEditData(prev => ({
-                          ...prev,
-                          tags: [...prev.tags, editTagInput.trim()]
-                        }));
-                        setEditTagInput('');
-                      }
-                    }}
-                    className="btn-secondary"
-                  >
-                    <Tag className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-100">
                 <button
@@ -523,25 +460,6 @@ export const MethodDetailModal: React.FC<MethodDetailModalProps> = ({
             </p>
           </div>
 
-          {/* Tags */}
-          {method.tags && method.tags.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Tag className="w-5 h-5" />
-                Tags
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {method.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="badge-primary"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Rating Section */}
           {showRatingInput && user && (
