@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Method, Comment } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from './AuthProvider';
+import { CategoryBadge } from './CategoryBadge';
 import { 
   X, 
   Star, 
@@ -275,9 +276,7 @@ export const MethodDetailModal: React.FC<MethodDetailModalProps> = ({
           <div className="flex items-start justify-between">
             <div className="flex-1 pr-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="badge-secondary text-xs">
-                  {method.category}
-                </span>
+                <CategoryBadge category={method.category} showIcon={false} />
                 {method.rating > 0 && (
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />

@@ -8,6 +8,7 @@
 import React from 'react';
 import { Star, User, Tag, Bookmark } from 'lucide-react';
 import { Method } from '@/types';
+import { CategoryBadge } from './CategoryBadge';
 
 interface MethodCardProps {
   method: Method;
@@ -75,10 +76,7 @@ export const MethodCard: React.FC<MethodCardProps> = ({
 
       {/* Category Badge */}
       <div className="mb-3">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-medium">
-          <Tag className="w-3.5 h-3.5" />
-          {method.category}
-        </span>
+        <CategoryBadge category={method.category} />
       </div>
 
       {/* Title */}
